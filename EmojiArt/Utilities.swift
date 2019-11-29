@@ -1,15 +1,13 @@
 //
 //  Utilities.swift
-//  EmojiArt
 //
-//  Created by Aashirwad Sinha on 11/12/19.
-//  Copyright © 2019 Credit Suisse. All rights reserved.
+//  Created by CS193p Instructor.
+//  Copyright © 2017 Stanford University. All rights reserved.
 //
-
 import UIKit
 
-class ImageFetcher {
-    
+class ImageFetcher
+{
     // Public API
     
     // To use, create with the closure you want called when the image is ready.
@@ -28,17 +26,13 @@ class ImageFetcher {
     //   otherwise the result of the fetch will be discarded and the handler never called.
     // In other words, keeping a strong pointer to your instance says "I'm still interested in its result."
     
-    var backup: UIImage? {
-        didSet {
-            callHandlerIfNeeded()
-        }
-    }
+    var backup: UIImage? { didSet { callHandlerIfNeeded() } }
     
     func fetch(_ url: URL) {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             if let data = try? Data(contentsOf: url.imageURL) {
                 if self != nil {
-                    // it's ok to create a UIImage off the main thread
+                    // yes, it's ok to create a UIImage off the main thread
                     if let image = UIImage(data: data) {
                         self?.handler(url, image)
                     } else {
@@ -62,6 +56,8 @@ class ImageFetcher {
         fetch(url)
     }
     
+    // Private Implementation
+    
     private let handler: (URL, UIImage) -> Void
     private var fetchFailed = false { didSet { callHandlerIfNeeded() } }
     private func callHandlerIfNeeded() {
@@ -73,7 +69,8 @@ class ImageFetcher {
 
 extension URL {
     var imageURL: URL {
-        if let url = UIImage.urlToStoreLocallyAsJPEG(named: self.path){
+        if let url = UIImage.urlToStoreLocallyAsJPEG(named: self.path) {
+            // this was created using UIImage.storeLocallyAsJPEG
             return url
         } else {
             // check to see if there is an embedded imgurl reference
@@ -90,22 +87,20 @@ extension URL {
     }
 }
 
-
-extension UIImage {
+extension UIImage
+{
     private static let localImagesDirectory = "UIImage.storeLocallyAsJPEG"
     
     static func urlToStoreLocallyAsJPEG(named: String) -> URL? {
         var name = named
         let pathComponents = named.components(separatedBy: "/")
-        
         if pathComponents.count > 1 {
-            if pathComponents[pathComponents.count - 2] == localImagesDirectory {
+            if pathComponents[pathComponents.count-2] == localImagesDirectory {
                 name = pathComponents.last!
             } else {
                 return nil
             }
         }
-        
         if var url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
             url = url.appendingPathComponent(localImagesDirectory)
             do {
@@ -133,7 +128,6 @@ extension UIImage {
                 }
             }
         }
-        
         return nil
     }
 }
@@ -142,13 +136,80 @@ extension String {
     func madeUnique(withRespectTo otherStrings: [String]) -> String {
         var possiblyUnique = self
         var uniqueNumber = 1
-        
         while otherStrings.contains(possiblyUnique) {
             possiblyUnique = self + " \(uniqueNumber)"
             uniqueNumber += 1
         }
-        
         return possiblyUnique
     }
 }
 
+extension Array where Element: Equatable {
+    var uniquified: [Element] {
+        var elements = [Element]()
+        forEach { if !elements.contains($0) { elements.append($0) } }
+        return elements
+    }
+}
+
+extension NSAttributedString {
+    func withFontScaled(by factor: CGFloat) -> NSAttributedString {
+        let mutable = NSMutableAttributedString(attributedString: self)
+        mutable.setFont(mutable.font?.scaled(by: factor))
+        return mutable
+    }
+    var font: UIFont? {
+        get { return attribute(.font, at: 0, effectiveRange: nil) as? UIFont }
+    }
+}
+
+extension String {
+    func attributedString(withTextStyle style: UIFontTextStyle, ofSize size: CGFloat) -> NSAttributedString {
+        let font = UIFontMetrics(forTextStyle: .body).scaledFont(for: UIFont.preferredFont(forTextStyle: .body).withSize(size))
+        return NSAttributedString(string: self, attributes: [.font:font])
+    }
+}
+
+extension NSMutableAttributedString {
+    func setFont(_ newValue: UIFont?) {
+        if newValue != nil { addAttributes([.font:newValue!], range: NSMakeRange(0, length)) }
+    }
+}
+
+extension UIFont {
+    func scaled(by factor: CGFloat) -> UIFont { return withSize(pointSize * factor) }
+}
+
+extension UILabel {
+    func stretchToFit() {
+        let oldCenter = center
+        sizeToFit()
+        center = oldCenter
+    }
+}
+
+extension CGPoint {
+    func offset(by delta: CGPoint) -> CGPoint {
+        return CGPoint(x: x + delta.x, y: y + delta.y)
+    }
+}
+
+extension UIViewController {
+    var contents: UIViewController {
+        if let navcon = self as? UINavigationController {
+            return navcon.visibleViewController ?? navcon
+        } else {
+            return self
+        }
+    }
+}
+
+extension UIView {
+    var snapshot: UIImage? {
+        UIGraphicsBeginImageContext(bounds.size)
+        drawHierarchy(in: bounds, afterScreenUpdates: true)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return image
+    }
+}
